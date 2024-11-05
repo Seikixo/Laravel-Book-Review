@@ -20,8 +20,8 @@ class BookController extends Controller
         );
 
         $books = match ($filter){
-            'popular_last_month' => $books->popularLastMont(),
-            'popular_last_6months' => $books->popularLast6Month(),
+            'popular_last_month' => $books->popularLastMonth(),
+            'popular_last_6months' => $books->popularLast6Months(),
             'highest_rated_last_month' => $books->highestRatedLastMonth(),
             'highest_rated_last_6months' => $books->highestRatedLast6Months(),
             default => $books->latest()->withAvgRating()->withReviewsCount()
