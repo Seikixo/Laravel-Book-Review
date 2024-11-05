@@ -8,15 +8,31 @@ use App\Models\Book;
 
 class BookController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index(Request $request)
     {
         $title = $request->input('title');
+        $filter = $request->input('filter', '');
 
-        $books = Book::when($title, fn($query, $title) => $query->title($title)
-        ) ->get();
+        $books = Book::when(
+            $title,
+            fn($query, $title) => $query->title($title)
+        );
+
+        $books = match ($filter){
+            'popular_last_month' => $books->popularLastMont(),
+            'popular_last_6months' => $books->popularLast6Month(),
+            'highest_rated_last_month' => $books->highestRatedLastMonth(),
+            'highest_rated_last_6months' => $books->highestRatedLast6Months(),
+            default => $books->latest()->withAvgRating()->withReviewsCount()
+        };
+
+        $cacheKey = 'books:' . $filter . ':' . $title;
+        $books = cache()->remember(
+            $cacheKey,
+            3600,
+            fn() => $books->get()
+        );
 
         return view('books.index', ['books' => $books]);
     }
@@ -42,7 +58,17 @@ class BookController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $cacheKey = 'book:' . $id;
+
+        $book = cache()->remember(
+            $cacheKey,
+            3600,
+            fn() => Book::with([
+                'reviews' => fn($query) => $query->latest()
+            ])->withAvgRating()->withReviewsCount()->findOrFail($id)
+        );
+
+        return view('books.show', ['book' => $book]);
     }
 
     /**
